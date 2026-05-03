@@ -1,71 +1,192 @@
-# memory-refining
+# OpenClaw Memory Refining
 
-三层记忆分层与自动提炼系统 for OpenClaw。
+> **解决 AI 助手的"记忆臃肿症"：从日志垃圾场到精准长期记忆**
+
+如果你也试过给 OpenClaw 配一个 **Obsidian + QMD** 的外置大脑，最后发现它解决的是"人的知识管理"，而不是"AI 的记忆继承"——这个 Skill 就是为你设计的。
 
 ---
 
-## 核心理念
+## 为什么你需要这个？
 
-记忆系统不是越多越好，而是**分层清晰、只进验证过的内容**。
+### 现状：单向写入的陷阱
+
+大多数 OpenClaw 用户的记忆目录最终都会变成这样：
 
 ```
-Layer 1: 日志层（原始积累）
-    ↓ 每周自动提炼
-Layer 2: 提炼区（结构化整理）
-    ↓ 人工确认 promote
-Layer 3: 长期记忆（经过验证的决策）
+memory/
+├── 2026-01-03.md   # 当天记了，再也没看过
+├── 2026-01-04.md   # 重要决策和临时想法混在一起
+├── 2026-01-05.md   # ...
+└── ...             # 300+ 文件后，MEMORY.md 越来越水
 ```
 
----
+**问题不是存不下，而是提炼不了：**
+- ❌ 日志越来越多，但从不清理 → MEMORY.md 被稀释
+- ❌ 跨 Session 项目状态丢失 → 每次都要重新对齐"上周做到哪了"
+- ❌ 临时想法和验证决策混在一起 → AI 检索时优先级混乱
 
-## 功能特性
+### 我们试过的弯路
 
-### 🗂️ 三层架构
+> "Obsidian 是给**人**用的知识管理工具，用来管理**AI**的记忆，逻辑上有点拧。"
 
-| 层级 | 文件 | 内容 | 管理方式 |
-|------|------|------|---------|
-| Layer 1 | `memory/YYYY-MM-DD.md` | 每日原始日志，进什么记什么 | 不做过滤 |
-| Layer 2 | `memory/refining/YYYY-Wnn.md` | 每周提炼结果 | cron 自动生成 |
-| Layer 3 | `MEMORY.md` | 长期记忆 | 显式 promote 规则 |
+| 能力 | Obsidian+QMD | 实际需求 |
+|------|-------------|---------|
+| 语义搜索跨目录 | ✅ | ❌ 精确匹配够用，优先级不高 |
+| 双向链接图谱 | ✅ | ❌ AI 不需要可视化图谱 |
+| 主动复习机制 | ❌ | ✅ **这才是真正的遗忘原因** |
+| 跨 Session 断点继承 | ❌ | ✅ **项目进度必须持久化** |
+| 记忆分层筛选 | ❌ | ✅ **自动提炼比存储格式更重要** |
 
-### 📋 Active Projects 追踪
-
-每个活跃项目一条记录，自动在每次 session 加载：
-- 当前阶段 / 阻断因素 / 下一步行动
-- 超过3个月无更新自动归档
-
-### ⚙️ 自动提炼 Cron
-
-每周日 22:00 自动执行：
-1. 扫描本周所有日志
-2. 提取高优先级 `**...**` 条目
-3. 生成 `refining/YYYY-Wnn.md` 提炼文件
-4. 由 agent 判断 promote 进 MEMORY.md
+**结论：** 与其折腾存储格式，不如建立**定期记忆复盘机制**——每周从日志里提炼要点，只有验证过的决策才能进入长期记忆。
 
 ---
 
-## 安装方式
+## 核心方案：三层记忆精炼架构
 
-### 方式一：直接安装（推荐）
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Layer 3: 长期记忆 (MEMORY.md)                              │
+│  经过验证的决策 · 项目状态 · 人物偏好 · 框架方法论           │
+│  ← 只有显式 promote 才能进入                                 │
+├─────────────────────────────────────────────────────────────┤
+│  Layer 2: 提炼区 (memory/refining/YYYY-Wnn.md)              │
+│  每周从日志提取待定内容，标注"待决 / 可删 / 可晋升"          │
+│  ← cron 自动生成，人工确认                                   │
+├─────────────────────────────────────────────────────────────┤
+│  Layer 1: 每日原始日志 (memory/YYYY-MM-DD.md)               │
+│  进来什么记什么，零过滤成本                                  │
+│  ← 保持现状，不改工作习惯                                    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**设计哲学：**
+- **Layer 1** 负责"零负担记录"——不判断价值，降低写入门槛
+- **Layer 2** 负责"结构化粗筛"——机器提取 + 人工确认，每周一次
+- **Layer 3** 负责"精准长期化"——只有带日期、经验证、有状态的内容才能进
+
+---
+
+## 三大核心机制
+
+### 1. 每周自动提炼（Cron Job）
+
+每周日晚 22:00 自动执行，无需手动整理：
+
+1. 扫描本周 7 天日志
+2. 提取 `**高优先级**` 条目（用 `**...**` 包裹的内容）
+3. 生成 `memory/refining/2026-W18.md` 提炼文件
+4. 等待你确认哪些 promote 进 MEMORY.md
+
+**提炼文件示例：**
+```markdown
+## 本周重要事件
+- xxx培训项目立项 [→ MEMORY.md? Y/N]
+
+## 项目断点
+- xxx培训: 完成框架设计，数据盘点待做
+
+## 待决事项
+- [ ] 是否引入外部AI专家做董事长培训
+
+## 可丢弃
+- 某次浏览器测试失败的过程记录
+```
+
+### 2. Active Projects 跨 Session 追踪
+
+`memory/active-projects.md` —— 你的项目断点存档：
+
+```markdown
+## xxx培训
+- 阶段: 数据盘点
+- 下一步: 找负责人确认数据来源
+- 决策记录: 框架已定，2026-04-27
+- 阻断: 等待授权
+
+## xx市场研究
+- 阶段: 未完成（4月25日打断）
+- 下一步: 完成研究报告
+```
+
+**每次新 Session 启动时，active-projects 自动注入 startup context**，AI 立刻知道"上周做到哪了"，无需你重复交代。
+
+### 3. 显式 Promote 规则（防 MEMORY.md 膨胀）
+
+进入 Layer 3 必须通过三道门槛：
+
+| 标准 | 说明 |
+|------|------|
+| ✅ 经过验证 | 是决策，不是猜测或临时想法 |
+| ✅ 状态明确 | 项目必须有当前阶段 + 下一步行动 |
+| ✅ 来源可追溯 | 每条末尾标注来源日期 |
+| ❌ 不过期 | 超过 3 个月无更新的项目自动归档 |
+
+**月度维护任务：**
+- 检查 MEMORY.md 冲突项，覆盖并注明
+- 将 3 个月未更新的项目移入 `memory/archive/`
+
+---
+
+## 5 分钟快速开始
+
+### 方式一：一键安装（推荐）
 
 ```bash
 clawhub install memory-refining
 ```
 
-### 方式二：从源码安装
+安装后自动注册每周日 22:00 的 cron 任务。
+
+### 方式二：手动安装
 
 ```bash
-# 克隆仓库
 git clone https://github.com/rexlei-rgb/openclaw-memory-refining.git
-# 进入目录
 cd openclaw-memory-refining
-# 打包 skill
 tar -czf memory-refining.skill SKILL.md scripts/
+# 上传 .skill 文件到 OpenClaw Web UI
 ```
 
-### 方式三：通过 OpenClaw Web UI
+### 验证安装
 
-上传 `memory-refining.skill` 文件到 OpenClaw 安装。
+```bash
+openclaw cron list
+# 应看到：每周日 22:00 memory-refining.sh
+```
+
+---
+
+## 日常使用工作流
+
+### 每日：零负担记录（Layer 1）
+
+每个 Session 结束时，保持现有习惯写入日志：
+
+```markdown
+# 2026-05-03 日志
+
+## 今天完成的事
+- 完成了 **xxx浏览器打通** 这个重要里程碑
+
+## 项目断点更新
+- xxx培训: 等待反馈
+
+## 待补充
+- [ ] 确认下周培训时间
+```
+
+**技巧：** 用 `**...**` 包裹重要内容，周末会自动被提取到提炼区。
+
+### 每周：人工确认（Layer 2 → Layer 3）
+
+周日晚上收到提炼文件后，你只需要做一道选择题：
+
+> 这条内容值得进入长期记忆吗？Y → 告诉 AI "promote 到 MEMORY.md"，N → 忽略或标记可删。
+
+### 每月：大扫除（Layer 3 维护）
+
+- 清理 MEMORY.md 中已过时的项目状态
+- 将沉睡项目移入归档
+- 检查是否有冲突决策需要覆盖
 
 ---
 
@@ -74,119 +195,43 @@ tar -czf memory-refining.skill SKILL.md scripts/
 ```
 openclaw-memory-refining/
 ├── README.md                    # 本文件
-├── LICENSE                    # MIT 开源协议
-├── SKILL.md                   # Skill 定义（触发条件 + 使用说明）
+├── LICENSE                      # MIT
+├── SKILL.md                     # Skill 定义（触发条件 + 格式规范）
 ├── scripts/
-│   └── memory-refining.sh     # 每周自动提炼脚本
-└── memory-refining.skill     # 打包好的 skill 文件
+│   └── memory-refining.sh       # 每周自动提炼脚本
+└── memory-refining.skill        # 打包好的安装文件
 ```
 
----
+### 文件说明
 
-## 文件说明
-
-### SKILL.md
-
-Skill 定义文件，包含：
-- 触发条件（description）
-- 三层架构说明
-- 日志格式规范
-- active-projects 格式
-- cron 配置说明
-
-### scripts/memory-refining.sh
-
-自动提炼脚本，功能：
-- 扫描本周日志（`memory/*.md`）
-- 提取高优先级条目（`**包裹的内容**`）
-- 生成 `refining/YYYY-Wnn.md` 文件
-- 由 agent 后续处理 promote 逻辑
-
----
-
-## 使用说明
-
-### 每日日志写入
-
-每个 session 结束时，自动或手动写入：
-
-```markdown
-# YYYY-MM-DD 日志
-
-## 今天完成的事
-
-## 项目断点更新
-
-## 雷雨反馈
-
-## 待补充
-- [ ]
-```
-
-### 高优先级标记
-
-日志中使用 `**...**` 包裹的内容会被自动提取进提炼区：
-
-```markdown
-今天完成了 **小红书浏览器控制打通** 这个重要里程碑
-```
-
-### Active Projects 更新
-
-每次项目有实质性进展时更新 `memory/active-projects.md`：
-
-```markdown
-## 项目名称
-- 启动: YYYY-MM-DD
-- 阶段: 当前状态
-- 阻断: 有/无
-- 下一步: 明确的下一步行动
-- 更新: YYYY-MM-DD
-```
-
-### Promote 规则
-
-进入 Layer 3 (MEMORY.md) 的内容必须是：
-- ✅ 经过验证的决策（不是猜测）
-- ✅ 有明确的项目状态
-- ✅ 标注来源日期
-- ❌ 不是临时想法或中间过程
-
----
-
-## Cron 任务配置
-
-skill 安装后会自动注册每周日 22:00 的 cron 任务。
-
-查看当前 cron 任务：
-
-```bash
-openclaw cron list
-```
-
-手动触发提炼：
-
-```bash
-cd memory && bash memory-refining.sh
-```
+| 文件 | 作用 |
+|------|------|
+| `SKILL.md` | OpenClaw 的 Skill 定义，包含触发条件、三层架构说明、日志格式规范 |
+| `scripts/memory-refining.sh` | 核心脚本：扫描日志 → 提取 `**高优内容**` → 生成提炼文件 |
+| `memory/*.md` | 你的每日日志（原有，不改动） |
+| `memory/refining/YYYY-Wnn.md` | 自动生成的周提炼文件（新增） |
+| `memory/active-projects.md` | 项目断点追踪（新增） |
+| `MEMORY.md` | 长期记忆（由你显式控制写入） |
 
 ---
 
 ## 依赖要求
 
 - OpenClaw Pi 版本
-- xvfb-run（用于无头浏览器场景，如需）
 - bash 环境
 - python3（用于日期计算）
+- xvfb-run（仅无头浏览器场景需要）
 
 ---
 
 ## 作者
 
-**rexlei-rgb** (rex.lei@icloud.com)
+**rexlei-rgb** — 一个试过 Obsidian+QMD 后发现"不如做好提炼"的 OpenClaw 重度用户。
+
+📧 rex.lei@icloud.com
 
 ---
 
 ## License
 
-MIT License - 随便用，保留署名即可。
+MIT License — 随便用，保留署名即可。
